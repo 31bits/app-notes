@@ -120,6 +120,7 @@ def ventana_codigo_verificacion(ventana, db, btn1, btn2, btn3):
 
             guardar_estado_sesion(codigo, name, gmail)
 
+
             # Refrescar nombre en ventana principal si está definido
             if hasattr(ventana, "set_nombre_usuario"):
                 ventana.set_nombre_usuario(name, gmail)

@@ -12,6 +12,7 @@ from utils.chrome_utils import abrir_chrome, conectar_driver
 from ui.verificacion_key import ventana_codigo_verificacion
 from ui.ventana_soporte import ventana_soporte
 from utils.session import cargar_estado_sesion
+from utils.session import cargar_estado_sesion
 
 import time
 from selenium.webdriver.common.by import By
@@ -125,20 +126,34 @@ def verificar_conexion_periodica():
 
 def descontar_uso_key_activada():
     try:
-        keys_ref = db.collection("keys").where("activated", "==", True).limit(1).stream()
-        for key_doc in keys_ref:
-            doc_ref = db.collection("keys").document(key_doc.id)
-            data = key_doc.to_dict()
-            usos_restantes = data.get("uses", 0)
+        datos_sesion = cargar_estado_sesion()
+        print("🔑 Sesión cargada:", datos_sesion)
 
-            if usos_restantes > 0:
-                doc_ref.update({"uses": usos_restantes - 1})
-                print(f"✅ Se descontó un uso. Restantes: {usos_restantes - 1}")
-            else:
-                print("⚠️ La key ya no tiene usos disponibles.")
-            break
+        if not datos_sesion or "key" not in datos_sesion:
+            print("⚠️ No se encontró código de sesión.")
+            return
+
+        key_code = datos_sesion["key"]
+        doc_ref = db.collection("keys").document(key_code)
+        doc = doc_ref.get()
+
+        if not doc.exists:
+            print("⚠️ La key no existe en Firebase.")
+            return
+
+        data = doc.to_dict()
+        usos_restantes = int(data.get("uses", 0))
+        print("📄 Datos de la key usada:", data)
+
+        if usos_restantes > 0:
+            doc_ref.update({"uses": usos_restantes - 1})
+            print(f"✅ Se descontó un uso. Restantes: {usos_restantes - 1}")
+        else:
+            print("⚠️ La key ya no tiene usos disponibles.")
     except Exception as e:
         print("Error al descontar uso:", e)
+
+
 
 
 # Interfaz principal
