@@ -1,5 +1,6 @@
 import customtkinter as ctk
 from PIL import Image, ImageTk
+import sys
 import os
 from tkinter import messagebox
 from urllib.parse import quote
@@ -16,6 +17,11 @@ from utils.session import cargar_estado_sesion
 
 import time
 from selenium.webdriver.common.by import By
+
+def ruta_recurso(rel_path):
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, rel_path)
+    return os.path.join(os.path.abspath("."), rel_path)
 
 def ya_existe_key_activada():
     try:
@@ -111,8 +117,7 @@ def accion_llenar_formulario():
 
 def verificar_conexion_periodica():
     conectado = hay_internet()
-
-    icono_path = os.path.join("images", "con-internet.png" if conectado else "sin-internet.png")
+    icono_path = ruta_recurso(os.path.join("images", "con-internet.png" if conectado else "sin-internet.png"))
     nueva_img = ctk.CTkImage(light_image=Image.open(icono_path).resize((25, 25), resample=Image.LANCZOS))
     internet_label.configure(image=nueva_img)
     internet_label.image = nueva_img
@@ -167,7 +172,7 @@ ventana.configure(fg_color="#cc0605")
 header_frame = ctk.CTkFrame(ventana, fg_color="#1d1d1b", height=100, corner_radius=0)
 header_frame.pack(fill="x", side="top")
 
-logo_path = os.path.join("edubo.png")
+logo_path = ruta_recurso("images/edubo.png")
 logo_img = Image.open(logo_path).resize((70, 20), resample=Image.LANCZOS)
 logo = ImageTk.PhotoImage(logo_img)
 logo_label = ctk.CTkLabel(header_frame, image=logo, text="")
@@ -251,7 +256,7 @@ progressbar.pack(pady=5)
 progressbar.set(0)
 
 # Botón de verificación
-key_icon_path = os.path.join("images", "key_icon.png")
+key_icon_path = ruta_recurso(os.path.join("images", "key_icon.png"))
 key_img = Image.open(key_icon_path).resize((25, 25), resample=Image.LANCZOS)
 key_photo = ImageTk.PhotoImage(key_img)
 
@@ -262,7 +267,7 @@ key_button.image = key_photo
 key_button.place(relx=1.0, x=-20, y=10, anchor="ne")
 
 # Ícono adicional 
-extra_icon_path = os.path.join("images", "Medium.png")  # Asegúrate de tener este ícono en la carpeta images
+extra_icon_path = ruta_recurso(os.path.join("images", "Medium.png"))  # Asegúrate de tener este ícono en la carpeta images
 extra_icon_img = Image.open(extra_icon_path).resize((50, 30), resample=Image.LANCZOS)
 extra_photo = ctk.CTkImage(light_image=extra_icon_img)
 
@@ -281,7 +286,7 @@ extra_button.image = extra_photo
 extra_button.place(relx=1.0, x=-90, y=7, anchor="ne")
 
 # Ícono conexión
-internet_icon_path = os.path.join("images", "con-internet.png" if hay_internet() else "sin-internet.png")
+internet_icon_path = ruta_recurso(os.path.join("images", "con-internet.png" if hay_internet() else "sin-internet.png"))
 internet_icon_img = Image.open(internet_icon_path).resize((7, 10), resample=Image.LANCZOS)
 internet_photo = ctk.CTkImage(light_image=internet_icon_img)
 

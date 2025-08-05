@@ -3,6 +3,12 @@ from PIL import Image
 import os
 import webbrowser
 from urllib.parse import quote
+import sys
+
+def ruta_recurso(rel_path):
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, rel_path)
+    return os.path.join(os.path.abspath("."), rel_path)
 
 def ventana_soporte(ventana, nombre_usuario, gmail_usuario):
     ventana_soporte = ctk.CTkToplevel()
@@ -23,7 +29,7 @@ def ventana_soporte(ventana, nombre_usuario, gmail_usuario):
         print(f"No se pudo posicionar al costado: {e}")
 
     # Ícono de soporte
-    icono_path = os.path.join("images", "Medium.png")
+    icono_path = ruta_recurso(os.path.join("images", "Medium.png"))
     soporte_img = Image.open(icono_path).resize((100, 100))
     soporte_photo = ctk.CTkImage(light_image=soporte_img, size=(100, 100))
     label_icono = ctk.CTkLabel(ventana_soporte, image=soporte_photo, text="")
@@ -48,7 +54,7 @@ def ventana_soporte(ventana, nombre_usuario, gmail_usuario):
         url = f"https://wa.me/{numero}?text={quote(mensaje)}"
         webbrowser.open(url)
 
-    whatsapp_icon_path = os.path.join("images", "whatsapp.png")
+    whatsapp_icon_path = ruta_recurso(os.path.join("images", "whatsapp.png"))
     whatsapp_img = Image.open(whatsapp_icon_path).resize((40, 40))
     whatsapp_photo = ctk.CTkImage(light_image=whatsapp_img, size=(40, 40))
 

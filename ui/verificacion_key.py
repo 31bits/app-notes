@@ -2,6 +2,12 @@ import customtkinter as ctk
 from PIL import Image, ImageTk
 import os
 from utils.session import guardar_estado_sesion
+import sys
+
+def ruta_recurso(rel_path):
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, rel_path)
+    return os.path.join(os.path.abspath("."), rel_path)
 
 def ventana_codigo_verificacion(ventana, db, btn1, btn2, btn3):
     ventana_pin = ctk.CTkToplevel()
@@ -22,8 +28,12 @@ def ventana_codigo_verificacion(ventana, db, btn1, btn2, btn3):
         print(f"No se pudo posicionar al costado: {e}")
 
     # Iconos
-    closed_icon_img = Image.open(os.path.join("images", "closed_key.png")).resize((70, 80))
-    open_icon_img = Image.open(os.path.join("images", "open_key.png")).resize((70, 80))
+    closed_icon_path = ruta_recurso(os.path.join("images", "closed_key.png"))
+    open_icon_path = ruta_recurso(os.path.join("images", "open_key.png"))
+
+    closed_icon_img = Image.open(closed_icon_path).resize((70, 80))
+    open_icon_img = Image.open(open_icon_path).resize((70, 80))
+
     closed_icon = ImageTk.PhotoImage(closed_icon_img)
     open_icon = ImageTk.PhotoImage(open_icon_img)
 
