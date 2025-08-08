@@ -13,7 +13,7 @@ from utils.chrome_utils import abrir_chrome, conectar_driver
 from ui.verificacion_key import ventana_codigo_verificacion
 from ui.ventana_soporte import ventana_soporte
 from utils.session import cargar_estado_sesion
-from utils.session import cargar_estado_sesion
+
 
 import time
 from selenium.webdriver.common.by import By
@@ -61,6 +61,10 @@ def accion_seleccionar_excel():
         progressbar.set(0.66)
 
 def accion_llenar_formulario():
+    if btn3.cget("state") == "disabled":
+        print("🚫 Botón desactivado. No se puede ejecutar.")
+        return
+    
     if not excel_path:
         messagebox.showwarning("Advertencia", "Primero selecciona un archivo Excel.")
         return
@@ -110,8 +114,15 @@ def accion_llenar_formulario():
             progressbar.set(0.66 + 0.34 * ((idx + 1) / total))
             
         descontar_uso_key_activada()
-        messagebox.showinfo("Éxito", "Todos los datos fueron ingresados.")
+
+        # Verificar si el botón fue desactivado (porque se quedó sin usos)
+        if btn3.cget("state") == "disabled":
+            messagebox.showinfo("Límite alcanzado", "Se ingresaron los datos, pero ya no tienes más usos disponibles.")
+        else:
+            messagebox.showinfo("Éxito", "Todos los datos fueron ingresados.")
+
         progressbar.set(1.0)
+
     except Exception as e:
         messagebox.showerror("Error", f"Ocurrió un error:\n{e}")
 
@@ -134,19 +145,31 @@ def actualizar_uso_key():
         datos_sesion = cargar_estado_sesion()
         if not datos_sesion or "key" not in datos_sesion:
             key_uses_label.configure(text="🔑")
+            btn3.configure(state="disabled", fg_color="#999999", hover_color="#999999")
             return
 
         key_code = datos_sesion["key"]
         doc = db.collection("keys").document(key_code).get()
         if not doc.exists:
             key_uses_label.configure(text="🔑")
+            btn3.configure(state="disabled", fg_color="#999999", hover_color="#999999")
             return
 
         usos_restantes = int(doc.to_dict().get("uses", 0))
         key_uses_label.configure(text=f"🔑: {usos_restantes}")
+
+        if usos_restantes <= 0:
+            # ❌ Sin usos: desactivar botón
+            btn3.configure(state="disabled", fg_color="#999999", hover_color="#999999")
+        else:
+            # ✅ Hay usos: activar botón
+            btn3.configure(state="normal", fg_color="#434343", hover_color="#232323")
+
     except Exception as e:
         print("Error al obtener usos:", e)
         key_uses_label.configure(text="🔑")
+        btn3.configure(state="disabled", fg_color="#999999", hover_color="#999999")
+
 
 def descontar_uso_key_activada():
     try:
@@ -170,17 +193,28 @@ def descontar_uso_key_activada():
         print("📄 Datos de la key usada:", data)
 
         if usos_restantes > 0:
-            doc_ref.update({"uses": usos_restantes - 1})
-            print(f"✅ Se descontó un uso. Restantes: {usos_restantes - 1}")
+            nuevos_usos = usos_restantes - 1
+            doc_ref.update({"uses": nuevos_usos})
+            print(f"✅ Se descontó un uso. Restantes: {nuevos_usos}")
+
+            # ⬇️ Actualiza interfaz manualmente con el nuevo valor
+            key_uses_label.configure(text=f"🔑: {nuevos_usos}")
+            if nuevos_usos <= 0:
+                btn3.configure(state="disabled", fg_color="#999999", hover_color="#999999")
+                ventana.update_idletasks()
+            else:
+                btn3.configure(state="normal", fg_color="#434343", hover_color="#232323")
+                ventana.update_idletasks()
+
         else:
             print("⚠️ La key ya no tiene usos disponibles.")
-        actualizar_uso_key()
+            key_uses_label.configure(text="🔑: 0")
+            btn3.configure(state="disabled", fg_color="#999999", hover_color="#999999")
+
     except Exception as e:
         print("Error al descontar uso:", e)
-
-
-
-
+        key_uses_label.configure(text="🔑: --")
+        btn3.configure(state="disabled", fg_color="#999999", hover_color="#999999")
 
 
 # Interfaz principal
@@ -284,7 +318,7 @@ key_photo = ImageTk.PhotoImage(key_img)
 
 key_button = ctk.CTkButton(header_frame, image=key_photo, text="", width=25, height=25,
                            fg_color="transparent", hover_color="#333333",
-                           command=lambda: ventana_codigo_verificacion(ventana, db, btn1, btn2, btn3))
+                           command=lambda: ventana_codigo_verificacion(ventana, db, btn1, btn2, btn3, actualizar_uso_key))
 key_button.image = key_photo
 key_button.place(relx=1.0, x=-20, y=10, anchor="ne")
 

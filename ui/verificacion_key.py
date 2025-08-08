@@ -9,7 +9,7 @@ def ruta_recurso(rel_path):
         return os.path.join(sys._MEIPASS, rel_path)
     return os.path.join(os.path.abspath("."), rel_path)
 
-def ventana_codigo_verificacion(ventana, db, btn1, btn2, btn3):
+def ventana_codigo_verificacion(ventana, db, btn1, btn2, btn3, actualizar_uso_key):
     ventana_pin = ctk.CTkToplevel()
     ventana_pin.title("Iniciar sesión con código")
     ventana_pin.geometry("380x300")
@@ -129,6 +129,9 @@ def ventana_codigo_verificacion(ventana, db, btn1, btn2, btn3):
             nombre_label.pack(pady=10)
 
             guardar_estado_sesion(codigo, name, gmail)
+            # Refrescar visualmente los usos restantes y estado de botones
+            actualizar_uso_key()
+
 
 
             # Refrescar nombre en ventana principal si está definido
