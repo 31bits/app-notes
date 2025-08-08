@@ -129,6 +129,25 @@ def verificar_conexion_periodica():
 
     ventana.after(5000, verificar_conexion_periodica)
 
+def actualizar_uso_key():
+    try:
+        datos_sesion = cargar_estado_sesion()
+        if not datos_sesion or "key" not in datos_sesion:
+            key_uses_label.configure(text="🔑")
+            return
+
+        key_code = datos_sesion["key"]
+        doc = db.collection("keys").document(key_code).get()
+        if not doc.exists:
+            key_uses_label.configure(text="🔑")
+            return
+
+        usos_restantes = int(doc.to_dict().get("uses", 0))
+        key_uses_label.configure(text=f"🔑: {usos_restantes}")
+    except Exception as e:
+        print("Error al obtener usos:", e)
+        key_uses_label.configure(text="🔑")
+
 def descontar_uso_key_activada():
     try:
         datos_sesion = cargar_estado_sesion()
@@ -155,8 +174,11 @@ def descontar_uso_key_activada():
             print(f"✅ Se descontó un uso. Restantes: {usos_restantes - 1}")
         else:
             print("⚠️ La key ya no tiene usos disponibles.")
+        actualizar_uso_key()
     except Exception as e:
         print("Error al descontar uso:", e)
+
+
 
 
 
@@ -265,6 +287,14 @@ key_button = ctk.CTkButton(header_frame, image=key_photo, text="", width=25, hei
                            command=lambda: ventana_codigo_verificacion(ventana, db, btn1, btn2, btn3))
 key_button.image = key_photo
 key_button.place(relx=1.0, x=-20, y=10, anchor="ne")
+
+
+
+# Etiqueta para mostrar usos restantes
+key_uses_label = ctk.CTkLabel(header_frame, text="🔑", text_color="#ffffff", font=("Helvetica", 12))
+key_uses_label.place(relx=1.0, x=-130, y=7, anchor="ne")
+actualizar_uso_key()
+
 
 # Ícono adicional 
 extra_icon_path = ruta_recurso(os.path.join("images", "Medium.png"))  # Asegúrate de tener este ícono en la carpeta images
