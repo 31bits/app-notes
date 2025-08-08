@@ -3,8 +3,6 @@ from PIL import Image, ImageTk
 import sys
 import os
 from tkinter import messagebox
-from urllib.parse import quote
-
 
 from firebase_config import initialize_firebase
 from utils.internet import hay_internet
@@ -14,9 +12,87 @@ from ui.verificacion_key import ventana_codigo_verificacion
 from ui.ventana_soporte import ventana_soporte
 from utils.session import cargar_estado_sesion
 
-
 import time
 from selenium.webdriver.common.by import By
+
+# ---- Estado de habilitación ----
+USES_OK = False
+INTERNET_OK = False
+key_uses_label = None
+
+def mostrar_modal_sin_usos():
+    m = ctk.CTkToplevel(ventana)
+    m.title("Sin usos disponibles")
+    m.geometry("380x200")
+    m.resizable(False, False)
+    m.transient(ventana)
+    m.grab_set()
+
+    ctk.CTkLabel(
+        m,
+        text="Tu key ya no tiene usos disponibles.\nPídele más al administrador.",
+        font=("Helvetica", 14),
+        justify="center",
+        wraplength=320
+    ).pack(padx=20, pady=(20, 10))
+
+    btns = ctk.CTkFrame(m, fg_color="transparent")
+    btns.pack(pady=10)
+
+    ctk.CTkButton(
+        btns, text="Contactar soporte",
+        command=lambda: (m.destroy(), ventana_soporte(ventana, nombre_usuario_global, gmail_usuario_global))
+    ).pack(side="left", padx=6)
+
+    ctk.CTkButton(btns, text="Cerrar", command=m.destroy).pack(side="left", padx=6)
+
+    m.wait_visibility()
+    m.focus_force()
+    ventana.wait_window(m)
+
+
+def mostrar_modal_sin_internet():
+    m = ctk.CTkToplevel(ventana)
+    m.title("Sin conexión")
+    m.geometry("360x170")
+    m.resizable(False, False)
+    m.transient(ventana)
+    m.grab_set()
+
+    ctk.CTkLabel(
+        m,
+        text="Necesitas conexión a internet para continuar.",
+        font=("Helvetica", 14),
+        justify="center",
+        wraplength=300
+    ).pack(padx=20, pady=(20, 10))
+
+    ctk.CTkButton(m, text="Entendido", command=m.destroy).pack(pady=10)
+
+    m.wait_visibility()
+    m.focus_force()
+    ventana.wait_window(m)
+
+def _apply_btn3_state():
+    btn = globals().get('btn3')
+    if not btn:
+        return
+
+    # Mantener apariencia
+    btn.configure(fg_color="#434343", hover_color="#232323", state="normal")
+
+    if USES_OK and INTERNET_OK:
+        btn.configure(command=accion_llenar_formulario)
+    elif not USES_OK:
+        btn.configure(command=mostrar_modal_sin_usos)
+    else:
+        btn.configure(command=mostrar_modal_sin_internet)
+
+
+def _set_key_label(texto):
+    lbl = globals().get('key_uses_label')
+    if lbl:
+        lbl.configure(text=texto)
 
 def ruta_recurso(rel_path):
     if hasattr(sys, '_MEIPASS'):
@@ -25,11 +101,14 @@ def ruta_recurso(rel_path):
 
 def ya_existe_key_activada():
     try:
-        keys_ref = db.collection("keys")
-        query = keys_ref.where("activated", "==", True).limit(1).stream()
-        for _ in query:
-            return True
-        return False
+        datos_sesion = cargar_estado_sesion()
+        if not datos_sesion or "key" not in datos_sesion:
+            return False
+        doc = db.collection("keys").document(datos_sesion["key"]).get()
+        if not doc.exists:
+            return False
+        data = doc.to_dict() or {}
+        return bool(data.get("activated", False))
     except Exception as e:
         print("Error al verificar key activada:", e)
         return False
@@ -61,8 +140,17 @@ def accion_seleccionar_excel():
         progressbar.set(0.66)
 
 def accion_llenar_formulario():
-    if btn3.cget("state") == "disabled":
-        print("🚫 Botón desactivado. No se puede ejecutar.")
+    if not INTERNET_OK:
+        mostrar_modal_sin_internet()
+
+        return
+    if not USES_OK:
+        mostrar_modal_sin_usos()
+        return
+
+    actualizar_uso_key()
+    if not USES_OK:
+        messagebox.showwarning("Sin usos", "Tu key no tiene usos disponibles.")
         return
     
     if not excel_path:
@@ -127,55 +215,57 @@ def accion_llenar_formulario():
         messagebox.showerror("Error", f"Ocurrió un error:\n{e}")
 
 def verificar_conexion_periodica():
+    global INTERNET_OK
     conectado = hay_internet()
+
     icono_path = ruta_recurso(os.path.join("images", "con-internet.png" if conectado else "sin-internet.png"))
     nueva_img = ctk.CTkImage(light_image=Image.open(icono_path).resize((25, 25), resample=Image.LANCZOS))
     internet_label.configure(image=nueva_img)
     internet_label.image = nueva_img
 
-    if conectado:
-        btn3.configure(state="normal", fg_color="#434343", hover_color="#232323")
-    else:
-        btn3.configure(state="disabled", fg_color="#999999", hover_color="#999999")
+    INTERNET_OK = conectado
+    _apply_btn3_state()
 
     ventana.after(5000, verificar_conexion_periodica)
 
+
 def actualizar_uso_key():
+    global USES_OK
     try:
         datos_sesion = cargar_estado_sesion()
         if not datos_sesion or "key" not in datos_sesion:
-            key_uses_label.configure(text="🔑")
-            btn3.configure(state="disabled", fg_color="#999999", hover_color="#999999")
+            _set_key_label("🔑")
+            USES_OK = False
+            _apply_btn3_state()
             return
 
         key_code = datos_sesion["key"]
         doc = db.collection("keys").document(key_code).get()
         if not doc.exists:
-            key_uses_label.configure(text="🔑")
-            btn3.configure(state="disabled", fg_color="#999999", hover_color="#999999")
+            _set_key_label("🔑")
+            USES_OK = False
+            _apply_btn3_state()
             return
 
-        usos_restantes = int(doc.to_dict().get("uses", 0))
-        key_uses_label.configure(text=f"🔑: {usos_restantes}")
+        data = doc.to_dict() or {}
+        usos_restantes = int(data.get("uses", 0))
+        _set_key_label(f"🔑: {usos_restantes}")
 
-        if usos_restantes <= 0:
-            # ❌ Sin usos: desactivar botón
-            btn3.configure(state="disabled", fg_color="#999999", hover_color="#999999")
-        else:
-            # ✅ Hay usos: activar botón
-            btn3.configure(state="normal", fg_color="#434343", hover_color="#232323")
+        USES_OK = bool(data.get("activated", False)) and usos_restantes > 0
+        _apply_btn3_state()
 
     except Exception as e:
         print("Error al obtener usos:", e)
-        key_uses_label.configure(text="🔑")
-        btn3.configure(state="disabled", fg_color="#999999", hover_color="#999999")
+        _set_key_label("🔑")
+        USES_OK = False
+        _apply_btn3_state()
 
 
 def descontar_uso_key_activada():
+    global USES_OK
     try:
         datos_sesion = cargar_estado_sesion()
         print("🔑 Sesión cargada:", datos_sesion)
-
         if not datos_sesion or "key" not in datos_sesion:
             print("⚠️ No se encontró código de sesión.")
             return
@@ -183,12 +273,11 @@ def descontar_uso_key_activada():
         key_code = datos_sesion["key"]
         doc_ref = db.collection("keys").document(key_code)
         doc = doc_ref.get()
-
         if not doc.exists:
             print("⚠️ La key no existe en Firebase.")
             return
 
-        data = doc.to_dict()
+        data = doc.to_dict() or {}
         usos_restantes = int(data.get("uses", 0))
         print("📄 Datos de la key usada:", data)
 
@@ -196,25 +285,21 @@ def descontar_uso_key_activada():
             nuevos_usos = usos_restantes - 1
             doc_ref.update({"uses": nuevos_usos})
             print(f"✅ Se descontó un uso. Restantes: {nuevos_usos}")
+            _set_key_label(f"🔑: {nuevos_usos}")
 
-            # ⬇️ Actualiza interfaz manualmente con el nuevo valor
-            key_uses_label.configure(text=f"🔑: {nuevos_usos}")
-            if nuevos_usos <= 0:
-                btn3.configure(state="disabled", fg_color="#999999", hover_color="#999999")
-                ventana.update_idletasks()
-            else:
-                btn3.configure(state="normal", fg_color="#434343", hover_color="#232323")
-                ventana.update_idletasks()
-
+            USES_OK = bool(data.get("activated", False)) and nuevos_usos > 0
+            _apply_btn3_state()
         else:
             print("⚠️ La key ya no tiene usos disponibles.")
-            key_uses_label.configure(text="🔑: 0")
-            btn3.configure(state="disabled", fg_color="#999999", hover_color="#999999")
+            _set_key_label("🔑: 0")
+            USES_OK = False
+            _apply_btn3_state()
 
     except Exception as e:
         print("Error al descontar uso:", e)
-        key_uses_label.configure(text="🔑: --")
-        btn3.configure(state="disabled", fg_color="#999999", hover_color="#999999")
+        _set_key_label("🔑: --")
+        USES_OK = False
+        _apply_btn3_state()
 
 
 # Interfaz principal
@@ -291,18 +376,18 @@ btn3.grid(row=3, column=0, pady=10)
 
 btn1.configure(state="disabled")
 btn2.configure(state="disabled")
-btn3.configure(state="disabled")
 
 # Desbloquear botones si hay key activada en la base
 if ya_existe_key_activada():
     btn1.configure(state="normal")
     btn2.configure(state="normal")
-    btn3.configure(state="normal")
 else:
     btn1.configure(state="disabled")
     btn2.configure(state="disabled")
-    btn3.configure(state="disabled")
 
+# Estado inicial de Internet + usos
+INTERNET_OK = hay_internet()
+_apply_btn3_state()
 
 # Barra inferior
 action_frame = ctk.CTkFrame(ventana, fg_color="#cc0605")
