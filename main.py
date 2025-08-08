@@ -20,6 +20,16 @@ USES_OK = False
 INTERNET_OK = False
 key_uses_label = None
 
+def _hacer_modal(m, parent):
+    m.transient(parent)              # apilado sobre el padre
+    m.lift()                         # traer al frente
+    m.attributes('-topmost', True)   # asegurar top mientras aparece
+    m.grab_set()                     # bloquea interacción con la app
+    m.focus_set()
+    m.protocol("WM_DELETE_WINDOW", m.destroy)  # cierre seguro
+    m.wait_visibility()              # esperar a que se muestre
+    parent.wait_window(m)            # bloquear hasta cerrar
+
 def mostrar_modal_sin_usos():
     m = ctk.CTkToplevel(ventana)
     m.title("Sin usos disponibles")
@@ -49,6 +59,7 @@ def mostrar_modal_sin_usos():
     m.wait_visibility()
     m.focus_force()
     ventana.wait_window(m)
+    _hacer_modal(m, ventana)
 
 
 def mostrar_modal_sin_internet():
@@ -72,6 +83,7 @@ def mostrar_modal_sin_internet():
     m.wait_visibility()
     m.focus_force()
     ventana.wait_window(m)
+    _hacer_modal(m, ventana)
 
 def _apply_btn3_state():
     btn = globals().get('btn3')
