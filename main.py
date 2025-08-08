@@ -415,7 +415,7 @@ key_photo = ImageTk.PhotoImage(key_img)
 
 key_button = ctk.CTkButton(header_frame, image=key_photo, text="", width=25, height=25,
                            fg_color="transparent", hover_color="#333333",
-                           command=lambda: ventana_codigo_verificacion(ventana, db, btn1, btn2, btn3, actualizar_uso_key))
+                           command=lambda: ventana_codigo_verificacion(ventana, db, btn1, btn2, btn3, actualizar_uso_key, set_nombre_usuario))
 key_button.image = key_photo
 key_button.place(relx=1.0, x=-20, y=10, anchor="ne")
 
