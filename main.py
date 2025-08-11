@@ -188,14 +188,14 @@ def accion_llenar_formulario():
             except:
                 continue
 
-            fila_excel = df[df['NOMBRE COMPLETO'].str.strip().str.upper() == nombre_web]
+            fila_excel = df[df['NOMBRE'].str.strip().str.upper() == nombre_web]
             if fila_excel.empty:
                 print(f"❌ No hay datos en Excel para {nombre_web}")
                 continue
 
             datos = fila_excel.iloc[0]
-            faltas = datos['Faltas 1ºP']
-            nota = datos['1º Parcial']
+            faltas = datos['Faltas']
+            nota = datos['Parcial']
 
             def set_input(name_part, value):
                 try:
