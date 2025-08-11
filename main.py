@@ -14,6 +14,7 @@ from utils.session import cargar_estado_sesion
 
 import time
 from selenium.webdriver.common.by import By
+import tkinter as tk
 
 # ---- Estado de habilitación ----
 USES_OK = False
@@ -320,6 +321,15 @@ ventana.title("Formulario Automático Universidad")
 ventana.geometry("480x360")
 ventana.resizable(False, False)
 ventana.configure(fg_color="#cc0605")
+
+try:
+    ventana.iconbitmap(ruta_recurso(os.path.join("assets", "edubo_icon.ico")))
+except Exception:
+    # Fallback opcional para Linux/macOS con PNG
+    try:
+        ventana.iconphoto(True, tk.PhotoImage(file=ruta_recurso(os.path.join("assets", "edubo_icon.png"))))
+    except Exception:
+        pass
 
 # Header
 header_frame = ctk.CTkFrame(ventana, fg_color="#1d1d1b", height=100, corner_radius=0)
